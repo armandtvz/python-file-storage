@@ -36,7 +36,7 @@ description = (
 )
 
 setuptools.setup(
-    name='python-storage',
+    name='python-file-storage',
     version=version,
     author='Armandt van Zyl',
     description=description,

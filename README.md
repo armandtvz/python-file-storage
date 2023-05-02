@@ -1,4 +1,4 @@
-# python-storage
+# python-file-storage
 
 A Python package that exposes a consistent API for working with different
 storage backends.
@@ -26,7 +26,7 @@ if you're looking for something more full-featured perhaps look at the
 
 1. Install the package:
    ```
-   pip install python-storage
+   pip install python-file-storage
    ```
 
 1. Add your configuration. Set the following as environment variables or add
