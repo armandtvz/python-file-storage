@@ -35,6 +35,9 @@ if you're looking for something more full-featured perhaps look at the
    ```python
    DEFAULT_STORAGE_BACKEND = storage.backends.s3.S3Storage
    S3_BUCKET_NAME = my-bucket-name
+   S3_ENDPOINT_URL = example.com # Optional
+   S3_ACCESS_KEY_ID = 123
+   S3_SECRET_ACCESS_KEY = 123
    ```
 
    Currently, using more than one storage backend at a time is unsupported.
