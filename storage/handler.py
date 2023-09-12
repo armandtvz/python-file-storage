@@ -19,8 +19,7 @@ class StorageHandler:
         try:
             StorageClass = import_string(settings.DEFAULT_STORAGE_BACKEND)
         except:
-            # TODO: raise a more specific error
-            raise ValueError()
+            raise ValueError(f'Could not import storage class from "{settings.DEFAULT_STORAGE_BACKEND}"')
 
         if issubclass(StorageClass, FileSystemStorage):
             return StorageClass(
