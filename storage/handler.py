@@ -38,6 +38,19 @@ class StorageHandler:
             raise ValueError(f"Invalid storage backend '{settings.DEFAULT_STORAGE_BACKEND}'.")
 
 
+    def get(self, name, backend_class, *args, **kwargs):
+        try:
+            StorageClass = import_string(backend_class)
+        except:
+            raise ValueError(f'Could not import storage class from "{backend_class}"')
+        if (
+            not issubclass(StorageClass, FileSystemStorage)
+            and not issubclass(StorageClass, S3Storage)
+        ):
+            raise ValueError(f'Invalid storage backend "{backend_class}"')
+
+        instance = StorageClass(*args, **kwargs)
+        return instance
 
 
 storage_handler = StorageHandler()

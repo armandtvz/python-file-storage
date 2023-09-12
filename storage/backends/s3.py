@@ -17,11 +17,18 @@ class S3Storage(Storage):
     def __init__(
         self,
         bucket_name,
-        endpoint_url=settings.S3_ENDPOINT_URL,
-        upload_options={}
+        endpoint_url=None,
+        upload_options={},
+        access_key_id=None,
+        secret_access_key=None,
     ):
-        access_key_id = settings.S3_ACCESS_KEY_ID
-        secret_access_key = settings.S3_SECRET_ACCESS_KEY
+        if not endpoint_url:
+            endpoint_url = settings.S3_ENDPOINT_URL
+        if not access_key_id:
+            access_key_id = settings.S3_ACCESS_KEY_ID
+        if not secret_access_key:
+            secret_access_key = settings.S3_SECRET_ACCESS_KEY
+
         self.bucket_name = bucket_name
         self.client = boto3.client(
             service_name='s3',
