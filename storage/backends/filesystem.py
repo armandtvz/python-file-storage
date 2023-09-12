@@ -9,7 +9,11 @@ from storage.base import Storage
 
 class FileSystemStorage(Storage):
 
-    def __init__(self, base_path, file_permissions=0o644):
+    def __init__(self, base_path=None, file_permissions=None):
+        if not base_path:
+            base_path = 'media/'
+        if not file_permissions:
+            file_permissions = 0o644
         self.base_path = base_path
         self.file_permissions = file_permissions
 
