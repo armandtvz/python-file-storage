@@ -40,8 +40,8 @@ class StorageHandler:
     def get(self, name, backend_class, *args, **kwargs):
         try:
             StorageClass = import_string(backend_class)
-        except:
-            raise ValueError(f'Could not import storage class from "{backend_class}"')
+        except Exception as exc:
+            raise ValueError(f'Could not import storage class from "{backend_class}"') from exc
         if (
             not issubclass(StorageClass, FileSystemStorage)
             and not issubclass(StorageClass, S3Storage)
