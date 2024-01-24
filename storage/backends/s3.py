@@ -1,5 +1,6 @@
 import tempfile
 import mimetypes
+from datetime import datetime, timezone, timedelta
 
 import boto3
 from botocore.exceptions import ClientError
@@ -95,7 +96,128 @@ class S3Storage(Storage):
             raise StorageError('Error deleting file from S3') from err
 
 
-    def exists(self, name):
+    def get_pages(self, prefix=None):
+        if not prefix:
+            prefix = ''
+        if not isinstance(prefix, str):
+            raise TypeError('"prefix" kwarg must be a string')
+        paginator = self.client.get_paginator('list_objects_v2')
+        pagination_kwargs = {
+            'Bucket': self.bucket_name,
+            'Prefix': prefix,
+        }
+        for page in paginator.paginate(**pagination_kwargs):
+            yield page
+
+
+    def get_objects(self, prefix=None):
+        """
+        Usage::
+
+            objects = default_storage.get_objects(prefix='optional_prefix/')
+            for object in objects:
+                print(object)
+                #
+                # Will print something similar to:
+                # {
+                #     'Key': 'filename.jpg',
+                #     'LastModified': datetime.datetime(2023, 5, 24, 16, 16, 38, 377000, tzinfo=tzutc()),
+                #     'ETag': '123123',
+                #     'Size': 129581,
+                # }
+        """
+        pages = self.get_pages(prefix=prefix)
+        for page in pages:
+            contents = page.get('Contents', [])
+            for object in contents:
+                yield object
+
+
+    def _delete_older_than(self, delta=None, older_than=None, prefix=None):
+        if delta:
+            if not isinstance(delta, timedelta):
+                raise TypeError('"delta" kwarg must be a timedelta instance')
+        if older_than:
+            if not isinstance(older_than, datetime):
+                raise TypeError('"older_than" kwarg must be a datetime instance')
+
+        if older_than and delta:
+            raise ValueError('You cannot provide both "delta" and "older_than" kwargs')
+        if not older_than and not delta:
+            raise ValueError(
+                'You must provide a value for the "delta" '
+                'or "older_than" kwargs'
+            )
+
+        now = datetime.now(tz=timezone.utc)
+        if not older_than:
+            older_than = now - delta
+
+        old_files = []
+        objects = self.get_objects(prefix=prefix)
+        for object in objects:
+            """
+            Example of ``object``::
+
+                {
+                    'Key': 'filename.jpg',
+                    'LastModified': datetime.datetime(2023, 5, 24, 16, 16, 38, 377000, tzinfo=tzutc()),
+                    'ETag': '123123',
+                    'Size': 129581,
+                }
+            """
+            # Cannot delete more than 1000 objects
+            # at a time via "delete_objects"
+            if len(old_files) == 1000:
+                break
+
+            last_modified = object['LastModified']
+            key = object['Key']
+
+            if last_modified:
+                if last_modified < older_than:
+                    old_files.append({'Key': key})
+
+        if not old_files:
+            return
+
+        to_delete = {'Objects': old_files}
+        response = self.client.delete_objects(
+            Bucket=self.bucket_name,
+            Delete=to_delete,
+        )
+        deleted = response['Deleted']
+        return deleted
+
+
+    def delete_older_than(self, *args, **kwargs):
+        """
+        Usage::
+
+            from datetime import datetime, timedelta
+            from storage import default_storage
+
+
+            older_than = datetime.fromisoformat('2023-05-28T00:00:00.000000+00:00')
+            deleted = default_storage.delete_older_than(
+                older_than=older_than,
+                prefix='myfiles/',
+            )
+
+        Or use a ``timedelta`` instead::
+
+            delta = timedelta(days=30)
+            deleted = default_storage.delete_older_than(delta=delta)
+        """
+        try:
+            return self._delete_older_than(*args, **kwargs)
+        except ClientError as e:
+            raise StorageError(
+                'Error deleting objects from storage older than delta'
+            ) from e
+
+
+    def exists(self, name) -> bool:
         try:
             self.client.head_object(Bucket=self.bucket_name, Key=name)
             return True
